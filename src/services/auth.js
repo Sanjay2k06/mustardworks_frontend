@@ -123,6 +123,22 @@ export const authService = {
     }
   },
 
+  // Upload profile image
+  uploadProfileImage: async (file) => {
+    try {
+      const formData = new FormData()
+      formData.append("image", file)
+      const response = await api.post("/auth/upload-profile", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+      const data = response?.data || response
+      return data
+    } catch (error) {
+      console.error("[AUTH SERVICE] uploadProfileImage failed:", error.response?.data || error.message)
+      throw error
+    }
+  },
+
   // Update password
   updatePassword: async (passwordData) => {
     try {

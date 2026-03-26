@@ -77,6 +77,42 @@ const Profile = () => {
       : "U"
   }, [user])
 
+  const [avatarFile, setAvatarFile] = useState(null)
+  const [uploading, setUploading] = useState(false)
+
+  const API_BASE = import.meta.env.VITE_API_BASE_URL
+    ? import.meta.env.VITE_API_BASE_URL.replace(/\/api$/, "")
+    : "https://mustardworks-backend.onrender.com"
+
+  const avatarUrl = user?.avatar
+    ? user.avatar.startsWith("http")
+      ? user.avatar
+      : `${API_BASE}${user.avatar}`
+    : null
+
+  const handleAvatarChange = (e) => {
+    const f = e.target.files && e.target.files[0]
+    if (f) setAvatarFile(f)
+  }
+
+  const handleAvatarUpload = async () => {
+    if (!avatarFile) return
+    try {
+      setUploading(true)
+      await authService.uploadProfileImage(avatarFile)
+      // reload user data
+      const fresh = await authService.getCurrentUser()
+      const normalizedUser = fresh?.user || fresh?.data?.user || fresh
+      setUser(normalizedUser || null)
+      setAvatarFile(null)
+    } catch (e) {
+      console.error("Avatar upload failed", e)
+      alert(e?.response?.data?.message || "Upload failed")
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const handleLogout = async () => {
     try {
       await authService.logout()
@@ -217,8 +253,14 @@ const Profile = () => {
         {/* Header Card */}
         <section className="bg-surface rounded-2xl shadow-soft p-6 md:p-8 mb-8">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-            <div className="h-20 w-20 md:h-24 md:w-24 rounded-full bg-gradient-to-br from-[color:var(--primary)] to-[color:var(--accent)] flex items-center justify-center text-white font-bold text-2xl md:text-3xl shadow-lg">
-              {initials}
+            <div className="h-20 w-20 md:h-24 md:w-24 rounded-full overflow-hidden flex items-center justify-center shadow-lg">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="avatar" className="h-full w-full object-cover" />
+              ) : (
+                <div className="h-full w-full bg-gradient-to-br from-[color:var(--primary)] to-[color:var(--accent)] flex items-center justify-center text-white font-bold text-2xl md:text-3xl">
+                  {initials}
+                </div>
+              )}
             </div>
             <div className="flex-1">
               <h1 className="text-3xl md:text-4xl font-bold text-app mb-2">
@@ -240,7 +282,18 @@ const Profile = () => {
                 </span>
               </div>
             </div>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 items-end">
+              {user?.role === "admin" && (
+                <div className="flex items-center gap-2">
+                  <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" id="avatarFileInput" />
+                  <label htmlFor="avatarFileInput" className="px-3 py-2 rounded-lg border border-token text-sm cursor-pointer hover:bg-surface">
+                    Choose Image
+                  </label>
+                  <button onClick={handleAvatarUpload} disabled={uploading || !avatarFile} className="px-3 py-2 rounded-lg bg-[color:var(--primary)] text-white text-sm disabled:opacity-50">
+                    {uploading ? "Uploading..." : avatarFile ? "Upload" : "Upload"}
+                  </button>
+                </div>
+              )}
               <button
                 onClick={() => setShowPasswordForm(!showPasswordForm)}
                 className="px-4 py-2 rounded-lg border-2 border-[color:var(--primary)] text-[color:var(--primary)] font-semibold hover:bg-[color:var(--primary)] hover:text-white transition-all duration-200"
